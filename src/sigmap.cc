@@ -664,6 +664,8 @@ void Sigmap::StreamingMap() {
                 read_seeding_step_size_, search_radius_,
                 num_reference_sequences, chains);
             num_events += read_feature_signal.size();
+
+            /*
             if (chains.size() >= 2) {
               if (chains[0].score / chains[1].score >= stop_mapping_ratio_) {
                 break;
@@ -685,6 +687,7 @@ void Sigmap::StreamingMap() {
                 break;
               }
             }
+            */
           }
         }
         if (chunk_index > 0 && (chunk_index == num_chunks ||
