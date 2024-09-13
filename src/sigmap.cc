@@ -631,7 +631,7 @@ void Sigmap::StreamingMap() {
       for (size_t read_signal_index = 0;
            read_signal_index < num_loaded_read_signals; ++read_signal_index) {
         double real_mapping_start_time = GetRealTime();
-        // std::cerr << "mapping read " << read_signal_index << ".\n";
+        std::cerr << "mapping read " << read_signal_index << ".\n";
         // read_signal_batch.MovingMedianSignalAt(read_signal_index, 8);
         // read_signal_batch.NormalizeSignalAt(read_signal_index);
         uint32_t bp_per_sec = 450;
@@ -644,6 +644,7 @@ void Sigmap::StreamingMap() {
         chains.clear();
         uint32_t num_events = 0;
         uint32_t chunk_index = 0;
+        uint32_t generate_chains_counter = 0;
         for (chunk_index = 0; chunk_index < num_chunks &&
                               chunk_index < (uint32_t)max_num_chunks_;
              ++chunk_index) {
@@ -651,12 +652,16 @@ void Sigmap::StreamingMap() {
           read_feature_signal_stdvs.clear();
           size_t signal_start = chunk_size * chunk_index;
           size_t signal_end = chunk_size * (chunk_index + 1);
+
+          std::cerr << "Signal chunk: (" << signal_start << ", " << signal_end << ")\n";
+
           if (signal_end > signal_length) {
             signal_end = signal_length;
           }
           GenerateEvents(signal_start, signal_end,
                          read_signal_batch.GetSignalAt(read_signal_index),
                          read_feature_signal, read_feature_signal_stdvs);
+          std::cerr << "read_feature_signal.size(): " << read_feature_signal.size() << "\n";
           if (read_feature_signal.size() > 50) {
             // float search_radius = 0.08;
             reference_spatial_index.GenerateChains(
@@ -664,8 +669,10 @@ void Sigmap::StreamingMap() {
                 read_seeding_step_size_, search_radius_,
                 num_reference_sequences, chains);
             num_events += read_feature_signal.size();
+            std::cerr << "generate_chains_counter: " << generate_chains_counter << "\n";
+            generate_chains_counter++;
 
-            /*
+            /* Commented out to stop the loop from exiting early
             if (chains.size() >= 2) {
               if (chains[0].score / chains[1].score >= stop_mapping_ratio_) {
                 break;
@@ -689,7 +696,7 @@ void Sigmap::StreamingMap() {
             }
             */
           }
-        }
+        // }
         if (chunk_index > 0 && (chunk_index == num_chunks ||
                                 chunk_index == (uint32_t)max_num_chunks_)) {
           --chunk_index;
@@ -732,98 +739,47 @@ void Sigmap::StreamingMap() {
           anchor_ref_gap_avg_length /= chains[0].num_anchors;
           anchor_read_gap_avg_length /= chains[0].num_anchors;
           std::string tags;
-          tags.append("mt:f:" + std::to_string(mapping_time * 1000));
-          tags.append("\tci:i:" + std::to_string(chunk_index + 1));
-          tags.append("\tsl:i:" +
+          tags.append("mapping_time: " + std::to_string(mapping_time * 1000));
+          tags.append("\tchunk_index+1: " + std::to_string(chunk_index + 1));
+          tags.append("\tsignal_length: " +
                       std::to_string(read_signal_batch.GetSignalLengthAt(
                           read_signal_index)));
-          tags.append("\tcm:i:" + std::to_string(chains[0].num_anchors));
-          tags.append("\tnc:i:" + std::to_string(chains.size()));
-          tags.append("\ts1:f:" + std::to_string(chains[0].score));
-          tags.append("\ts2:f:" +
+          tags.append("\tchains[0].num_anchors: " + std::to_string(chains[0].num_anchors));
+          tags.append("\tchains.size(): " + std::to_string(chains.size()));
+          tags.append("\tchains[0].score: " + std::to_string(chains[0].score));
+          tags.append("\tchains.size() > 1 ? chains[1].score : 0: " +
                       std::to_string(chains.size() > 1 ? chains[1].score : 0));
-          tags.append("\tsm:f:" + std::to_string(mean_chain_score));
-          tags.append("\tad:f:" + std::to_string(average_anchor_distance));
-          tags.append("\tat:f:" + std::to_string(anchor_ref_gap_avg_length));
-          tags.append("\taq:f:" + std::to_string(anchor_read_gap_avg_length));
+          tags.append("\tmean_chain_score: " + std::to_string(mean_chain_score));
+          tags.append("\taverage_anchor_distance: " + std::to_string(average_anchor_distance));
+          tags.append("\tanchor_ref_gap_avg_length: " + std::to_string(anchor_ref_gap_avg_length));
+          tags.append("\tanchor_read_gap_avg_length: " + std::to_string(anchor_read_gap_avg_length));
+          tags.append("\n\n");
+
+          std::cerr << "Anchors size: " << chains[0].anchors.size() << "\n";
+          std::cerr << "Query position: " << chains[0].anchors[0].query_position << "\n";
+
+
           mappings_on_diff_ref_seqs[chains[0].reference_sequence_index]
               .emplace_back(PAFMapping{
-                  (uint32_t)read_signal_index,
+                  (uint32_t)read_signal_index,  // read_id
                   std::string(
-                      read_signal_batch.GetSignalNameAt(read_signal_index)),
+                      read_signal_batch.GetSignalNameAt(read_signal_index)),  // read_name
                   (uint32_t)read_signal_batch.GetSignalLengthAt(
-                      read_signal_index),
+                      read_signal_index), // read_length
                   (uint32_t)(read_position_scale *
-                             chains[0].anchors.back().query_position),
+                             chains[0].anchors.back().query_position),  // read_start_position
                   (uint32_t)(read_position_scale *
-                             chains[0].anchors[0].query_position),
+                             chains[0].anchors[0].query_position),  // read_end_position
                   chains[0].direction == Positive
                       ? (uint32_t)chains[0].start_position
                       : (uint32_t)(reference_sequence_batch.GetSequenceLengthAt(
                                        chains[0].reference_sequence_index) +
-                                   1 - chains[0].end_position),
+                                   1 - chains[0].end_position), // fragment_start_position
                   (uint32_t)(chains[0].end_position - chains[0].start_position +
-                             1),
+                             1),  // fragment_length
                   chains[0].mapq,
                   chains[0].direction == Positive ? (uint8_t)1 : (uint8_t)0,
                   (uint8_t)1, tags});
-#ifdef DEBUG
-          for (size_t i = 0; i < chains.size(); ++i) {
-            if (chains[i].direction == Positive) {
-              std::cerr << i << " best chaining score: " << chains[i].score
-                        << ", direction: +"
-                        << ", reference name: "
-                        << reference_sequence_batch.GetSequenceNameAt(
-                               chains[i].reference_sequence_index)
-                        << ", anchor target start postion: "
-                        << chains[i].start_position
-                        << ", anchor target end postion: "
-                        << chains[i].end_position
-                        << ", # anchors: " << chains[i].num_anchors
-                        << ", mapq: " << (int)chains[i].mapq << ".\n";
-              for (size_t ai = 0; ai < chains[i].anchors.size(); ++ai) {
-                std::cerr << "(" << chains[i].anchors[ai].target_position << ","
-                          << chains[i].anchors[ai].query_position << ","
-                          << chains[i].anchors[ai].distance << "), ";
-              }
-            } else {
-              std::cerr << i << " best chaining score: " << chains[i].score
-                        << ", direction: -"
-                        << ", reference name: "
-                        << reference_sequence_batch.GetSequenceNameAt(
-                               chains[i].reference_sequence_index)
-                        << ", anchor target start postion: "
-                        << reference_sequence_batch.GetSequenceLengthAt(
-                               chains[i].reference_sequence_index) +
-                               1 - chains[i].end_position
-                        << ", anchor target end postion: "
-                        << reference_sequence_batch.GetSequenceLengthAt(
-                               chains[i].reference_sequence_index) -
-                               chains[i].start_position
-                        << ", # anchors: " << chains[i].num_anchors
-                        << ", mapq: " << (int)chains[i].mapq << ".\n";
-              for (size_t ai = 0; ai < chains[i].anchors.size(); ++ai) {
-                std::cerr << "(" << chains[i].anchors[ai].target_position << ","
-                          << chains[i].anchors[ai].query_position << ","
-                          << chains[i].anchors[ai].distance << "), ";
-              }
-            }
-            std::cerr << "\n";
-            std::cerr << "\n";
-          }
-          std::cerr << "Read name: "
-                    << read_signal_batch.GetSignalNameAt(read_signal_index)
-                    << ", length: " << read_feature_signal.size()
-                    << ", reference name: "
-                    << reference_sequence_batch.GetSequenceNameAt(
-                           chains[0].reference_sequence_index)
-                    << ", length: "
-                    << positive_reference_feature_signals
-                           [chains[0].reference_sequence_index]
-                               .size()
-                    << "\n";
-          std::cerr << "\n";
-#endif
         } else {
           std::string tags;
           tags.append("mt:f:" + std::to_string(mapping_time * 1000));
@@ -869,6 +825,7 @@ void Sigmap::StreamingMap() {
       }  // end of task loop
     }    // end of openmp single
   }      // end of openmp parallel
+  } // added end bracket
   std::cerr << "Finished mapping in " << GetRealTime() - real_start_time
             << ", # reads: " << num_loaded_read_signals << "\n";
 
