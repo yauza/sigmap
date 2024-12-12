@@ -150,7 +150,7 @@ void SignalBatch::AddSignal(const hdf5_tools::File &file,
     signal_values.erase(signal_values.begin() + valid_signal_length,
                         signal_values.end());
   }
-  signals_.emplace_back(Signal{id, fast5_file_path, digitisation, range, offset, signal_values,
+  signals_.emplace_back(Signal{id, fast5_path, digitisation, range, offset, signal_values,
                                std::vector<float>()});
 }
 
