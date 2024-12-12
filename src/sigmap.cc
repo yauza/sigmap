@@ -741,7 +741,7 @@ void Sigmap::StreamingMap() {
           anchor_read_gap_avg_length /= chains[0].num_anchors;
           std::string tags;
           tags.append("mapping_time: " + std::to_string(mapping_time * 1000));
-	  tags.append("fast5: " + std::to_string(read_signal_batch.GetFast5FilePathAt(read_signal_index)));
+//	  tags.append("fast5: " + std::to_string(read_signal_batch.GetFast5FilePathAt(read_signal_index)));
           tags.append("\tchunk_index+1: " + std::to_string(chunk_index + 1));
           tags.append("\tsignal_length: " +
                       std::to_string(read_signal_batch.GetSignalLengthAt(
