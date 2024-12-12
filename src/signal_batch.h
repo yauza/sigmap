@@ -14,6 +14,7 @@ namespace sigmap {
 struct Signal {
   // read group name
   std::string id;
+  std::string fast5_path;
   // channel_id
   float digitisation;
   float range;
@@ -48,6 +49,9 @@ class SignalBatch {
   }
   size_t GetSignalLengthAt(size_t signal_index) const {
     return signals_[signal_index].signal_values.size();
+  }
+  const char *GetFast5FilePathAt(size_t signal_index) const {
+    return signals_[signal_index].fast5_path.data();
   }
 
  protected:

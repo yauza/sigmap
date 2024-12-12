@@ -92,14 +92,14 @@ void SignalBatch::AddSignalsFromFAST5(const std::string &fast5_file_path) {
       }
       std::string raw_path = "/Raw/Reads/" + read;
       std::string ch_path = "/UniqueGlobalKey/channel_id";
-      AddSignal(fast5_file, raw_path, ch_path);
+      AddSignal(fast5_file, raw_path, ch_path, fast5_file_path);
     }
   } else {
     signals_.reserve(signals_.size() + fast5_file_groups.size());
     for (std::string &read : fast5_file_groups) {
       std::string raw_path = "/" + read + "/Raw";
       std::string ch_path = "/" + read + "/channel_id";
-      AddSignal(fast5_file, raw_path, ch_path);
+      AddSignal(fast5_file, raw_path, ch_path, fast5_file_path);
     }
   }
   fast5_file.close();
@@ -107,7 +107,8 @@ void SignalBatch::AddSignalsFromFAST5(const std::string &fast5_file_path) {
 
 void SignalBatch::AddSignal(const hdf5_tools::File &file,
                             const std::string &raw_path,
-                            const std::string &ch_path) {
+                            const std::string &ch_path,
+			    const std::string &fast5_path) {
   std::string id;
   for (auto a : file.get_attr_map(raw_path)) {
     if (a.first == "read_id") {
@@ -149,7 +150,7 @@ void SignalBatch::AddSignal(const hdf5_tools::File &file,
     signal_values.erase(signal_values.begin() + valid_signal_length,
                         signal_values.end());
   }
-  signals_.emplace_back(Signal{id, digitisation, range, offset, signal_values,
+  signals_.emplace_back(Signal{id, fast5_file_path, digitisation, range, offset, signal_values,
                                std::vector<float>()});
 }
 
@@ -205,7 +206,7 @@ void SignalBatch::AddSignal(slow5_rec_t *rec) {
     signal_values.erase(signal_values.begin() + valid_signal_length,
                         signal_values.end());
   }
-  signals_.emplace_back(Signal{id, digitisation, range, offset, signal_values,
+  signals_.emplace_back(Signal{id, "", digitisation, range, offset, signal_values,
                                std::vector<float>()});
 }
 
@@ -264,7 +265,7 @@ void SignalBatch::ConvertSequencesToSignals(const SequenceBatch &sequence_batch,
         sequence_length);
     std::string signal_id(sequence_batch.GetSequenceNameAt(sequence_index));
     signals_.emplace_back(
-        Signal{signal_id, 0, 0, 0, signal_values, negative_signal_values});
+        Signal{signal_id, "", 0, 0, 0, signal_values, negative_signal_values});
   }
   std::cerr << "Convert " << num_sequences << " sequences to signals in "
             << GetRealTime() - real_start_time << "s.\n";

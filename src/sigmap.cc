@@ -632,6 +632,7 @@ void Sigmap::StreamingMap() {
            read_signal_index < num_loaded_read_signals; ++read_signal_index) {
         double real_mapping_start_time = GetRealTime();
         std::cerr << "mapping read " << read_signal_index << ".\n";
+	std::cerr << "Fast5 file: " << read_signal_batch.GetFast5FilePathAt(read_signal_index) << "\n";
         // read_signal_batch.MovingMedianSignalAt(read_signal_index, 8);
         // read_signal_batch.NormalizeSignalAt(read_signal_index);
         uint32_t bp_per_sec = 450;
@@ -740,6 +741,7 @@ void Sigmap::StreamingMap() {
           anchor_read_gap_avg_length /= chains[0].num_anchors;
           std::string tags;
           tags.append("mapping_time: " + std::to_string(mapping_time * 1000));
+	  tags.append("fast5: " + std::to_string(read_signal_batch.GetFast5FilePathAt(read_signal_index)));
           tags.append("\tchunk_index+1: " + std::to_string(chunk_index + 1));
           tags.append("\tsignal_length: " +
                       std::to_string(read_signal_batch.GetSignalLengthAt(
