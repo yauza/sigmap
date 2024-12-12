@@ -33,7 +33,7 @@ class SignalBatch {
   void FinalizeLoading();
   size_t LoadAllReadSignals();
   void AddSignal(const hdf5_tools::File &file, const std::string &raw_path,
-                 const std::string &ch_path);
+                 const std::string &ch_path, const std::string &fast5_file_path);
   void AddSignal(slow5_rec_t *rec);
   void AddSignalsFromFAST5(const std::string &fast5_file_path);
   void AddSignalsFromSLOW5(const std::string &slow5_file_path);
